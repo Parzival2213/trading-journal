@@ -1,6 +1,6 @@
 // ==================== CONFIGURATION ====================
 const CONFIG = {
-    owner: 'PArzival2213',
+    owner: 'Parzival2213',
     repo: 'trading-journal',
     branch: 'main',
     path: 'trades.json',
@@ -13,6 +13,7 @@ const CONFIG = {
 // ==================== STATE ====================
 let trades = [];
 let nextId = 1;
+let isSyncing = false;
 
 // ==================== INITIALIZATION ====================
 document.addEventListener('DOMContentLoaded', async () => {
@@ -198,14 +199,31 @@ function calculateDaysHeld(openDate, closeDate) {
     return Math.max(1, diff);
 }
 
-function deleteTrade(id) {
-    if (!confirm('Delete this trade?')) return;
+async function deleteTrade(id) {
+    if (!confirm('Delete this trade? This will also remove it from GitHub.')) return;
+    
+    const token = getToken();
+    if (!token) {
+        updateSaveStatus('No GitHub token saved. Cannot sync deletion.', 'error');
+        return;
+    }
+    
+    // Remove from local array first
     trades = trades.filter(t => t.id !== id);
     renderAll();
-    updateSaveStatus('Trade deleted. Click "Save to GitHub" to commit.', 'neutral');
+    
+    // Auto-sync to GitHub
+    updateSaveStatus('Deleting trade and syncing to GitHub...', 'neutral');
+    const success = await syncToGitHub(token, `Delete trade ${id}`);
+    
+    if (success) {
+        updateSaveStatus('Trade deleted and synced to GitHub', 'success');
+    } else {
+        updateSaveStatus('Trade removed from page but GitHub sync failed. Click "Save to GitHub" to retry.', 'error');
+    }
 }
 
-function editHoldingTrade(id) {
+async function editHoldingTrade(id) {
     const trade = trades.find(t => t.id === id);
     if (!trade) return;
     
@@ -230,16 +248,11 @@ function editHoldingTrade(id) {
     updateSaveStatus('Trade closed. Click "Save to GitHub" to commit.', 'neutral');
 }
 
-// ==================== GITHUB API SAVE ====================
-async function saveToGitHub() {
-    const token = getToken();
-    if (!token) {
-        updateSaveStatus('No GitHub token saved. Enter your token above.', 'error');
-        return;
-    }
-
-    updateSaveStatus('Saving to GitHub...', 'neutral');
-
+// ==================== GITHUB SYNC ====================
+async function syncToGitHub(token, message) {
+    if (isSyncing) return false;
+    isSyncing = true;
+    
     try {
         const getUrl = `https://api.github.com/repos/${CONFIG.owner}/${CONFIG.repo}/contents/${CONFIG.path}?ref=${CONFIG.branch}`;
         const getResponse = await fetch(getUrl, {
@@ -256,11 +269,11 @@ async function saveToGitHub() {
         }
 
         const content = btoa(unescape(encodeURIComponent(JSON.stringify(trades, null, 2))));
-        const message = `Update trades: ${trades.length} trades, ${new Date().toISOString().slice(0,10)}`;
+        const commitMessage = message || `Update trades: ${trades.length} trades, ${new Date().toISOString().slice(0,10)}`;
 
         const putUrl = `https://api.github.com/repos/${CONFIG.owner}/${CONFIG.repo}/contents/${CONFIG.path}`;
         const body = {
-            message: message,
+            message: commitMessage,
             content: content,
             branch: CONFIG.branch
         };
@@ -276,15 +289,30 @@ async function saveToGitHub() {
             body: JSON.stringify(body)
         });
 
-        if (putResponse.ok) {
-            updateSaveStatus('Saved to GitHub successfully', 'success');
-        } else {
-            const error = await putResponse.json();
-            updateSaveStatus(`Error: ${error.message}`, 'error');
-        }
+        isSyncing = false;
+        return putResponse.ok;
 
     } catch (err) {
-        updateSaveStatus(`Error: ${err.message}`, 'error');
+        console.error('Sync error:', err);
+        isSyncing = false;
+        return false;
+    }
+}
+
+async function saveToGitHub() {
+    const token = getToken();
+    if (!token) {
+        updateSaveStatus('No GitHub token saved. Enter your token above.', 'error');
+        return;
+    }
+
+    updateSaveStatus('Saving to GitHub...', 'neutral');
+    const success = await syncToGitHub(token);
+    
+    if (success) {
+        updateSaveStatus('Saved to GitHub successfully', 'success');
+    } else {
+        updateSaveStatus('Save failed. Check token and try again.', 'error');
     }
 }
 
@@ -372,12 +400,10 @@ function populateInstrumentFilter() {
     const select = document.getElementById('filterInstrument');
     const currentValue = select.value;
     
-    // Clear existing options except first
     while (select.options.length > 1) {
         select.remove(1);
     }
     
-    // Get unique instruments from trades
     const usedInstruments = [...new Set(trades.map(t => t.instrument))].sort();
     
     usedInstruments.forEach(inst => {
@@ -387,7 +413,6 @@ function populateInstrumentFilter() {
         select.appendChild(opt);
     });
     
-    // Restore selection if still valid
     if (currentValue && usedInstruments.includes(currentValue)) {
         select.value = currentValue;
     }
