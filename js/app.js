@@ -4,7 +4,7 @@ const CONFIG = {
     repo: 'trading-journal',
     branch: 'main',
     path: 'trades.json',
-    rawUrl: 'https://raw.githubusercontent.com/YOUR_USERNAME/trading-journal/main/trades.json',
+    rawUrl: 'https://raw.githubusercontent.com/Parzival2213/trading-journal/main/trades.json',
     instruments: ['V10', 'V25', 'V50', 'V75', 'V100', 'Crash 500', 'Crash 1000', 'Boom 500', 'Boom 1000', 'Step Index'],
     setups: ['FVG', 'Breaker Block', 'Order Block', 'Fair Value Gap + Breaker', 'Liquidity Sweep', 'Other'],
     grades: ['A', 'B', 'C', 'D', 'F']
