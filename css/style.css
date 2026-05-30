@@ -1,0 +1,272 @@
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    background: #0a0e1a;
+    color: #c8d1e0;
+    line-height: 1.6;
+}
+
+.container {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 20px;
+}
+
+header {
+    text-align: center;
+    margin-bottom: 30px;
+    padding-bottom: 20px;
+    border-bottom: 1px solid #1a2332;
+}
+
+h1 {
+    color: #00d4aa;
+    font-size: 2rem;
+    font-weight: 600;
+}
+
+.subtitle {
+    color: #5a6a7f;
+    font-size: 0.9rem;
+    margin-top: 5px;
+}
+
+/* Stats Grid */
+.stats-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+    gap: 15px;
+    margin-bottom: 30px;
+}
+
+.stat-card {
+    background: #111827;
+    border: 1px solid #1a2332;
+    border-radius: 10px;
+    padding: 20px;
+    text-align: center;
+}
+
+.stat-label {
+    font-size: 0.75rem;
+    color: #5a6a7f;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-bottom: 8px;
+}
+
+.stat-value {
+    font-size: 1.8rem;
+    font-weight: 700;
+    color: #00d4aa;
+}
+
+.stat-value.negative {
+    color: #ef4444;
+}
+
+/* Form */
+.form-section {
+    margin-bottom: 25px;
+}
+
+.toggle-btn {
+    width: 100%;
+    padding: 15px;
+    background: #111827;
+    border: 1px solid #1a2332;
+    border-radius: 10px;
+    color: #00d4aa;
+    font-size: 1rem;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.toggle-btn:hover {
+    background: #1a2332;
+}
+
+form.hidden {
+    display: none;
+}
+
+form {
+    background: #111827;
+    border: 1px solid #1a2332;
+    border-radius: 10px;
+    padding: 20px;
+    margin-top: 15px;
+}
+
+.form-row {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    gap: 15px;
+    margin-bottom: 15px;
+}
+
+.form-group {
+    display: flex;
+    flex-direction: column;
+}
+
+label {
+    font-size: 0.8rem;
+    color: #5a6a7f;
+    margin-bottom: 6px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+input, select, textarea {
+    background: #0a0e1a;
+    border: 1px solid #1a2332;
+    border-radius: 6px;
+    padding: 10px;
+    color: #c8d1e0;
+    font-size: 0.95rem;
+}
+
+input:focus, select:focus, textarea:focus {
+    outline: none;
+    border-color: #00d4aa;
+}
+
+.submit-btn {
+    width: 100%;
+    padding: 14px;
+    background: #00d4aa;
+    color: #0a0e1a;
+    border: none;
+    border-radius: 8px;
+    font-size: 1rem;
+    font-weight: 600;
+    cursor: pointer;
+    margin-top: 10px;
+}
+
+.submit-btn:hover {
+    background: #00b894;
+}
+
+/* Filters */
+.filters {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 20px;
+    flex-wrap: wrap;
+}
+
+.filters select {
+    min-width: 140px;
+}
+
+.filters button {
+    padding: 10px 20px;
+    background: #1a2332;
+    border: 1px solid #2a3a4f;
+    border-radius: 6px;
+    color: #c8d1e0;
+    cursor: pointer;
+}
+
+/* Table */
+.table-section {
+    overflow-x: auto;
+    margin-bottom: 25px;
+}
+
+table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.9rem;
+}
+
+th {
+    background: #111827;
+    padding: 12px;
+    text-align: left;
+    color: #5a6a7f;
+    font-weight: 500;
+    text-transform: uppercase;
+    font-size: 0.75rem;
+    letter-spacing: 0.5px;
+    border-bottom: 1px solid #1a2332;
+}
+
+td {
+    padding: 12px;
+    border-bottom: 1px solid #1a2332;
+}
+
+tr:hover {
+    background: #111827;
+}
+
+.win { color: #00d4aa; }
+.loss { color: #ef4444; }
+.breakeven { color: #f59e0b; }
+
+.grade-a { color: #00d4aa; font-weight: 600; }
+.grade-f { color: #ef4444; font-weight: 600; }
+
+.delete-btn {
+    background: #1a2332;
+    border: none;
+    color: #ef4444;
+    padding: 5px 10px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 0.8rem;
+}
+
+/* Export */
+.export-section {
+    text-align: center;
+    padding: 30px;
+    background: #111827;
+    border: 1px solid #1a2332;
+    border-radius: 10px;
+}
+
+.export-btn {
+    padding: 14px 30px;
+    background: #1a2332;
+    border: 1px solid #00d4aa;
+    color: #00d4aa;
+    border-radius: 8px;
+    font-size: 1rem;
+    cursor: pointer;
+}
+
+.export-btn:hover {
+    background: #00d4aa;
+    color: #0a0e1a;
+}
+
+.hint {
+    color: #5a6a7f;
+    font-size: 0.85rem;
+    margin-top: 10px;
+}
+
+/* Responsive */
+@media (max-width: 600px) {
+    .stats-grid {
+        grid-template-columns: repeat(2, 1fr);
+    }
+    .form-row {
+        grid-template-columns: 1fr;
+    }
+    .filters {
+        flex-direction: column;
+    }
+    .filters select {
+        width: 100%;
+    }
+}
