@@ -197,11 +197,20 @@
             </table>
         </section>
 
-        <!-- Export -->
-        <section class="export-section">
-            <button id="exportBtn" class="export-btn">Export trades.json</button>
-            <p class="hint">Download and commit to your repo to save</p>
-        </section>
+<!-- Export / Save -->
+<section class="export-section">
+    <div class="token-input">
+        <label>GitHub Token (stored locally)</label>
+        <input type="password" id="githubToken" placeholder="ghp_xxxxxxxxxxxx">
+        <button id="saveTokenBtn" class="small-btn">Save Token</button>
+        <p class="hint" id="tokenStatus">No token saved</p>
+    </div>
+    
+    <button id="saveToGitHubBtn" class="export-btn">Save to GitHub</button>
+    <button id="exportBtn" class="secondary-btn">Download JSON (backup)</button>
+    
+    <p class="hint" id="saveStatus">Click "Save to GitHub" to commit trades</p>
+</section>
     </div>
 
     <script src="js/app.js"></script>
