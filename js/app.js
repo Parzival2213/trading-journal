@@ -1,29 +1,28 @@
-// Configuration
+// ==================== CONFIGURATION ====================
 const CONFIG = {
-    owner: 'Parzival2213',        
-    repo: 'trading-journal',       
+    owner: 'PArzival2213',
+    repo: 'trading-journal',
     branch: 'main',
     path: 'trades.json',
+    rawUrl: 'https://raw.githubusercontent.com/YOUR_USERNAME/trading-journal/main/trades.json',
     instruments: ['V10', 'V25', 'V50', 'V75', 'V100', 'Crash 500', 'Crash 1000', 'Boom 500', 'Boom 1000', 'Step Index'],
     setups: ['FVG', 'Breaker Block', 'Order Block', 'Fair Value Gap + Breaker', 'Liquidity Sweep', 'Other'],
     grades: ['A', 'B', 'C', 'D', 'F']
 };
 
-// State
+// ==================== STATE ====================
 let trades = [];
 let nextId = 1;
 
-// Initialize
+// ==================== INITIALIZATION ====================
 document.addEventListener('DOMContentLoaded', async () => {
     loadToken();
-    await loadTrades();
     setupEventListeners();
-    populateFilters();
+    await loadTradesFromGitHub();
     renderAll();
 });
 
-// ============ TOKEN MANAGEMENT ============
-
+// ==================== TOKEN MANAGEMENT ====================
 function loadToken() {
     const token = localStorage.getItem('github_token');
     if (token) {
@@ -52,13 +51,16 @@ function getToken() {
     return localStorage.getItem('github_token');
 }
 
-// ============ DATA LOADING ============
-
-async function loadTrades() {
+// ==================== DATA LOADING (FROM GITHUB) ====================
+async function loadTradesFromGitHub() {
+    updateSaveStatus('Loading trades from GitHub...', 'neutral');
+    
     try {
-        const response = await fetch('trades.json?t=' + Date.now());
+        const response = await fetch(CONFIG.rawUrl + '?t=' + Date.now());
+        
         if (response.ok) {
             trades = await response.json();
+            
             if (trades.length > 0) {
                 const maxId = Math.max(...trades.map(t => {
                     const num = parseInt(t.id.split('-')[1]);
@@ -66,15 +68,20 @@ async function loadTrades() {
                 }));
                 nextId = maxId + 1;
             }
+            
+            updateSaveStatus(`Loaded ${trades.length} trades from GitHub`, 'success');
+        } else {
+            trades = [];
+            updateSaveStatus('No trades found on GitHub. Starting fresh.', 'neutral');
         }
     } catch (e) {
-        console.log('No trades.json found, starting fresh');
+        console.error('Load error:', e);
         trades = [];
+        updateSaveStatus('Could not load from GitHub. Starting fresh.', 'error');
     }
 }
 
-// ============ EVENT LISTENERS ============
-
+// ==================== EVENT LISTENERS ====================
 function setupEventListeners() {
     document.getElementById('toggleForm').addEventListener('click', () => {
         document.getElementById('tradeForm').classList.toggle('hidden');
@@ -85,35 +92,60 @@ function setupEventListeners() {
         addTrade();
     });
 
+    document.getElementById('status').addEventListener('change', toggleHoldingFields);
+
     document.getElementById('filterInstrument').addEventListener('change', renderTable);
     document.getElementById('filterOutcome').addEventListener('change', renderTable);
     document.getElementById('filterGrade').addEventListener('change', renderTable);
+    document.getElementById('filterStatus').addEventListener('change', renderTable);
     document.getElementById('clearFilters').addEventListener('click', clearFilters);
 
     document.getElementById('saveTokenBtn').addEventListener('click', saveToken);
     document.getElementById('saveToGitHubBtn').addEventListener('click', saveToGitHub);
     document.getElementById('exportBtn').addEventListener('click', exportTrades);
 
-    document.getElementById('date').valueAsDate = new Date();
+    document.getElementById('openDate').valueAsDate = new Date();
 }
 
-// ============ TRADE MANAGEMENT ============
+// ==================== HOLDING FIELDS TOGGLE ====================
+function toggleHoldingFields() {
+    const status = document.getElementById('status').value;
+    const closeRow = document.getElementById('closeDateRow');
+    const exitRow = document.getElementById('exitRow');
+    
+    if (status === 'Holding') {
+        closeRow.style.display = 'none';
+        exitRow.style.display = 'none';
+        document.getElementById('closeDate').required = false;
+        document.getElementById('exit').required = false;
+    } else {
+        closeRow.style.display = 'grid';
+        exitRow.style.display = 'grid';
+        document.getElementById('closeDate').required = true;
+        document.getElementById('exit').required = true;
+    }
+}
 
+// ==================== TRADE MANAGEMENT ====================
 function addTrade() {
-    const date = document.getElementById('date').value;
-    const time = document.getElementById('time').value;
+    const status = document.getElementById('status').value;
+    const openDate = document.getElementById('openDate').value;
+    const openTime = document.getElementById('openTime').value;
     
     const trade = {
-        id: `${date.replace(/-/g, '')}-${String(nextId).padStart(3, '0')}`,
-        date: date,
-        time: time,
+        id: `${openDate.replace(/-/g, '')}-${String(nextId).padStart(3, '0')}`,
+        status: status,
+        openDate: openDate,
+        openTime: openTime,
+        closeDate: status === 'Holding' ? null : document.getElementById('closeDate').value,
+        closeTime: status === 'Holding' ? null : document.getElementById('closeTime').value,
         instrument: document.getElementById('instrument').value,
         direction: document.getElementById('direction').value,
         entry: parseFloat(document.getElementById('entry').value),
         stop: parseFloat(document.getElementById('stop').value),
         target: parseFloat(document.getElementById('target').value),
-        exit: parseFloat(document.getElementById('exit').value),
-        exitTime: document.getElementById('exitTime').value,
+        exit: status === 'Holding' ? null : parseFloat(document.getElementById('exit').value),
+        riskPercent: parseFloat(document.getElementById('riskPercent').value) || 1.0,
         setup: document.getElementById('setup').value,
         grade: document.getElementById('grade').value,
         mentalState: parseInt(document.getElementById('mentalState').value),
@@ -121,15 +153,23 @@ function addTrade() {
         notes: document.getElementById('notes').value
     };
 
-    trade.rMultiple = calculateRMultiple(trade);
-    trade.outcome = determineOutcome(trade);
-    trade.riskPercent = 1.0;
+    if (status === 'Closed') {
+        trade.rMultiple = calculateRMultiple(trade);
+        trade.outcome = determineOutcome(trade);
+        trade.daysHeld = calculateDaysHeld(trade.openDate, trade.closeDate);
+    } else {
+        trade.rMultiple = null;
+        trade.outcome = 'Holding';
+        trade.daysHeld = calculateDaysHeld(trade.openDate, new Date().toISOString().slice(0, 10));
+    }
 
     trades.unshift(trade);
     nextId++;
 
     document.getElementById('tradeForm').reset();
-    document.getElementById('date').valueAsDate = new Date();
+    document.getElementById('openDate').valueAsDate = new Date();
+    document.getElementById('status').value = 'Closed';
+    toggleHoldingFields();
     document.getElementById('tradeForm').classList.add('hidden');
 
     renderAll();
@@ -150,6 +190,14 @@ function determineOutcome(trade) {
     return 'Breakeven';
 }
 
+function calculateDaysHeld(openDate, closeDate) {
+    if (!openDate) return 0;
+    const open = new Date(openDate);
+    const close = closeDate ? new Date(closeDate) : new Date();
+    const diff = Math.ceil((close - open) / (1000 * 60 * 60 * 24));
+    return Math.max(1, diff);
+}
+
 function deleteTrade(id) {
     if (!confirm('Delete this trade?')) return;
     trades = trades.filter(t => t.id !== id);
@@ -157,8 +205,32 @@ function deleteTrade(id) {
     updateSaveStatus('Trade deleted. Click "Save to GitHub" to commit.', 'neutral');
 }
 
-// ============ GITHUB API SAVE ============
+function editHoldingTrade(id) {
+    const trade = trades.find(t => t.id === id);
+    if (!trade) return;
+    
+    const newExit = prompt('Enter exit price:', trade.target);
+    if (newExit === null) return;
+    
+    const newCloseDate = prompt('Enter close date (YYYY-MM-DD):', new Date().toISOString().slice(0, 10));
+    if (!newCloseDate) return;
+    
+    const newCloseTime = prompt('Enter close time (HH:MM):', new Date().toTimeString().slice(0, 5));
+    if (!newCloseTime) return;
+    
+    trade.status = 'Closed';
+    trade.exit = parseFloat(newExit);
+    trade.closeDate = newCloseDate;
+    trade.closeTime = newCloseTime;
+    trade.rMultiple = calculateRMultiple(trade);
+    trade.outcome = determineOutcome(trade);
+    trade.daysHeld = calculateDaysHeld(trade.openDate, trade.closeDate);
+    
+    renderAll();
+    updateSaveStatus('Trade closed. Click "Save to GitHub" to commit.', 'neutral');
+}
 
+// ==================== GITHUB API SAVE ====================
 async function saveToGitHub() {
     const token = getToken();
     if (!token) {
@@ -169,7 +241,6 @@ async function saveToGitHub() {
     updateSaveStatus('Saving to GitHub...', 'neutral');
 
     try {
-        // 1. Get current file to obtain SHA (needed for update)
         const getUrl = `https://api.github.com/repos/${CONFIG.owner}/${CONFIG.repo}/contents/${CONFIG.path}?ref=${CONFIG.branch}`;
         const getResponse = await fetch(getUrl, {
             headers: {
@@ -184,11 +255,9 @@ async function saveToGitHub() {
             sha = fileData.sha;
         }
 
-        // 2. Prepare content
         const content = btoa(unescape(encodeURIComponent(JSON.stringify(trades, null, 2))));
         const message = `Update trades: ${trades.length} trades, ${new Date().toISOString().slice(0,10)}`;
 
-        // 3. Commit/update file
         const putUrl = `https://api.github.com/repos/${CONFIG.owner}/${CONFIG.repo}/contents/${CONFIG.path}`;
         const body = {
             message: message,
@@ -208,7 +277,7 @@ async function saveToGitHub() {
         });
 
         if (putResponse.ok) {
-            updateSaveStatus('✓ Saved to GitHub successfully', 'success');
+            updateSaveStatus('Saved to GitHub successfully', 'success');
         } else {
             const error = await putResponse.json();
             updateSaveStatus(`Error: ${error.message}`, 'error');
@@ -225,11 +294,11 @@ function updateSaveStatus(msg, type) {
     el.className = 'hint ' + (type === 'success' ? 'success' : type === 'error' ? 'error' : '');
 }
 
-// ============ RENDERING ============
-
+// ==================== RENDERING ====================
 function renderAll() {
     renderStats();
     renderTable();
+    populateInstrumentFilter();
 }
 
 function renderStats() {
@@ -237,23 +306,24 @@ function renderStats() {
     
     document.getElementById('totalTrades').textContent = filtered.length;
     
-    const wins = filtered.filter(t => t.outcome === 'Win');
-    const winRate = filtered.length > 0 ? Math.round((wins.length / filtered.length) * 100) : 0;
+    const closedTrades = filtered.filter(t => t.status === 'Closed');
+    const wins = closedTrades.filter(t => t.outcome === 'Win');
+    const winRate = closedTrades.length > 0 ? Math.round((wins.length / closedTrades.length) * 100) : 0;
     document.getElementById('winRate').textContent = winRate + '%';
     
-    const totalR = filtered.reduce((sum, t) => sum + t.rMultiple, 0);
+    const totalR = closedTrades.reduce((sum, t) => sum + (t.rMultiple || 0), 0);
     document.getElementById('totalR').textContent = totalR.toFixed(2);
     document.getElementById('totalR').className = 'stat-value ' + (totalR >= 0 ? '' : 'negative');
     
-    const avgR = filtered.length > 0 ? totalR / filtered.length : 0;
+    const avgR = closedTrades.length > 0 ? totalR / closedTrades.length : 0;
     document.getElementById('avgR').textContent = avgR.toFixed(2);
     
-    const expectancy = calculateExpectancy(filtered);
+    const expectancy = calculateExpectancy(closedTrades);
     const expEl = document.getElementById('expectancy');
     expEl.textContent = expectancy.toFixed(2);
     expEl.className = 'stat-value ' + (expectancy >= 0 ? '' : 'negative');
     
-    const streak = calculateStreak(filtered);
+    const streak = calculateStreak(closedTrades);
     document.getElementById('streak').textContent = streak;
 }
 
@@ -287,23 +357,40 @@ function getFilteredTrades() {
     const inst = document.getElementById('filterInstrument').value;
     const outcome = document.getElementById('filterOutcome').value;
     const grade = document.getElementById('filterGrade').value;
+    const status = document.getElementById('filterStatus').value;
     
     return trades.filter(t => {
         if (inst && t.instrument !== inst) return false;
         if (outcome && t.outcome !== outcome) return false;
         if (grade && t.grade !== grade) return false;
+        if (status && t.status !== status) return false;
         return true;
     });
 }
 
-function populateFilters() {
-    const instSelect = document.getElementById('filterInstrument');
-    CONFIG.instruments.forEach(inst => {
+function populateInstrumentFilter() {
+    const select = document.getElementById('filterInstrument');
+    const currentValue = select.value;
+    
+    // Clear existing options except first
+    while (select.options.length > 1) {
+        select.remove(1);
+    }
+    
+    // Get unique instruments from trades
+    const usedInstruments = [...new Set(trades.map(t => t.instrument))].sort();
+    
+    usedInstruments.forEach(inst => {
         const opt = document.createElement('option');
         opt.value = inst;
         opt.textContent = inst;
-        instSelect.appendChild(opt);
+        select.appendChild(opt);
     });
+    
+    // Restore selection if still valid
+    if (currentValue && usedInstruments.includes(currentValue)) {
+        select.value = currentValue;
+    }
 }
 
 function renderTable() {
@@ -313,20 +400,31 @@ function renderTable() {
     
     filtered.forEach(trade => {
         const row = document.createElement('tr');
-        const outcomeClass = trade.outcome.toLowerCase();
-        const gradeClass = 'grade-' + trade.grade.toLowerCase();
+        if (trade.status === 'Holding') row.classList.add('holding');
+        
+        const outcomeClass = trade.outcome ? trade.outcome.toLowerCase() : 'holding';
+        const gradeClass = 'grade-' + (trade.grade || '').toLowerCase();
+        const daysClass = trade.daysHeld > 1 ? 'days-badge long' : 'days-badge';
+        
+        const daysDisplay = trade.daysHeld ? `<span class="${daysClass}">${trade.daysHeld}d</span>` : '-';
+        
+        const actions = trade.status === 'Holding' 
+            ? `<button class="edit-btn" onclick="editHoldingTrade('${trade.id}')">Close</button>`
+            : '';
         
         row.innerHTML = `
-            <td>${trade.date}<br><small>${trade.time}</small></td>
+            <td>${trade.openDate}<br><small>${trade.openTime || ''}</small></td>
+            <td>${trade.closeDate || '-'}<<br><small>${trade.closeTime || ''}</small></td>
+            <td>${daysDisplay}</td>
             <td>${trade.instrument}</td>
             <td>${trade.direction}</td>
             <td>${trade.entry.toFixed(2)}</td>
-            <td>${trade.exit.toFixed(2)}</td>
-            <td class="${trade.rMultiple >= 0 ? 'win' : 'loss'}">${trade.rMultiple > 0 ? '+' : ''}${trade.rMultiple.toFixed(2)}R</td>
-            <td class="${outcomeClass}">${trade.outcome}</td>
+            <td>${trade.exit ? trade.exit.toFixed(2) : '-'}</td>
+            <td class="${trade.rMultiple >= 0 ? 'win' : trade.rMultiple < 0 ? 'loss' : ''}">${trade.rMultiple !== null ? (trade.rMultiple > 0 ? '+' : '') + trade.rMultiple.toFixed(2) + 'R' : '-'}</td>
+            <td class="${outcomeClass}">${trade.outcome || 'Holding'}</td>
             <td class="${gradeClass}">${trade.grade}</td>
             <td>${trade.setup}</td>
-            <td><button class="delete-btn" onclick="deleteTrade('${trade.id}')">Delete</button></td>
+            <td>${actions}<button class="delete-btn" onclick="deleteTrade('${trade.id}')">Delete</button></td>
         `;
         tbody.appendChild(row);
     });
@@ -336,11 +434,11 @@ function clearFilters() {
     document.getElementById('filterInstrument').value = '';
     document.getElementById('filterOutcome').value = '';
     document.getElementById('filterGrade').value = '';
+    document.getElementById('filterStatus').value = '';
     renderAll();
 }
 
-// ============ EXPORT (Backup) ============
-
+// ==================== EXPORT (BACKUP) ====================
 function exportTrades() {
     const data = JSON.stringify(trades, null, 2);
     const blob = new Blob([data], { type: 'application/json' });
