@@ -270,3 +270,65 @@ tr:hover {
         width: 100%;
     }
 }
+
+.token-input {
+    margin-bottom: 20px;
+    padding: 15px;
+    background: #0a0e1a;
+    border-radius: 8px;
+    border: 1px solid #1a2332;
+}
+
+.token-input label {
+    display: block;
+    margin-bottom: 8px;
+    color: #5a6a7f;
+}
+
+.token-input input {
+    width: 70%;
+    display: inline-block;
+    margin-right: 10px;
+}
+
+.small-btn {
+    padding: 10px 15px;
+    background: #1a2332;
+    border: 1px solid #2a3a4f;
+    color: #00d4aa;
+    border-radius: 6px;
+    cursor: pointer;
+}
+
+.secondary-btn {
+    padding: 14px 30px;
+    background: #111827;
+    border: 1px solid #2a3a4f;
+    color: #c8d1e0;
+    border-radius: 8px;
+    font-size: 1rem;
+    cursor: pointer;
+    margin-left: 10px;
+}
+
+#tokenStatus {
+    margin-top: 8px;
+    color: #5a6a7f;
+}
+
+#tokenStatus.saved {
+    color: #00d4aa;
+}
+
+#saveStatus {
+    margin-top: 15px;
+    color: #5a6a7f;
+}
+
+#saveStatus.success {
+    color: #00d4aa;
+}
+
+#saveStatus.error {
+    color: #ef4444;
+}
