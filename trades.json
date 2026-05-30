@@ -1,1 +1,22 @@
-[]
+[
+  {
+    "id": "20260530-002",
+    "date": "2026-05-30",
+    "time": "19:05",
+    "instrument": "V10",
+    "direction": "Long",
+    "entry": 2300,
+    "stop": 2305,
+    "target": 2315,
+    "exit": 2315,
+    "exitTime": "19:20",
+    "setup": "Liquidity Sweep",
+    "grade": "A",
+    "mentalState": 3,
+    "screenshot": "",
+    "notes": "",
+    "rMultiple": 3,
+    "outcome": "Win",
+    "riskPercent": 1
+  }
+]
