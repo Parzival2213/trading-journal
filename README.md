@@ -21,3 +21,5 @@ checklist:
 
 NOTE: Check for how many clear setups, on average can happen in a week.
 Do the above by backtesting on a weekly basis. 
+
+make sure to markout OTE befor looking for liquididty sweepas and see how often does it react to OTE or liquidity sweeps.
