@@ -24,3 +24,5 @@ Do the above by backtesting on a weekly basis.
 
 forget about OTE, follow the rules of the liquidity sweep + iFVG + break of trendline liquidity: target swing lows/highs. 
 this is considered to follow simplicity, repeatability and and eliminating confusion. if it reacts at OTE minus sweeping any significant liquidity, its a gone trade - no emotions !
+
+we only consider OTE if there is any seeming liquidity resting with in it.
