@@ -1,10 +1,10 @@
 // ==================== CONFIGURATION ====================
 const CONFIG = {
-    owner: 'Parzival2213',
+    owner: 'YOUR_USERNAME',
     repo: 'trading-journal',
     branch: 'main',
     path: 'trades.json',
-    rawUrl: 'https://raw.githubusercontent.com/Parzival2213/trading-journal/main/trades.json',
+    rawUrl: 'https://raw.githubusercontent.com/YOUR_USERNAME/trading-journal/main/trades.json',
     instruments: ['V10', 'V25', 'V50', 'V75', 'V100', 'Crash 500', 'Crash 1000', 'Boom 500', 'Boom 1000', 'Step Index'],
     setups: ['FVG', 'Breaker Block', 'Order Block', 'Fair Value Gap + Breaker', 'Liquidity Sweep', 'Other'],
     grades: ['A', 'B', 'C', 'D', 'F']
@@ -179,10 +179,16 @@ function addTrade() {
 
 function calculateRMultiple(trade) {
     const risk = Math.abs(trade.entry - trade.stop);
-    const reward = Math.abs(trade.exit - trade.entry);
-    const direction = trade.direction === 'Long' ? 1 : -1;
-    const rawR = (reward * direction) / risk;
-    return Math.round(rawR * 100) / 100;
+    
+    if (trade.direction === 'Long') {
+        // Long: profit when exit > entry
+        const reward = trade.exit - trade.entry;
+        return Math.round((reward / risk) * 100) / 100;
+    } else {
+        // Short: profit when entry > exit
+        const reward = trade.entry - trade.exit;
+        return Math.round((reward / risk) * 100) / 100;
+    }
 }
 
 function determineOutcome(trade) {
@@ -252,7 +258,6 @@ async function syncToGitHub(token, message) {
     isSyncing = true;
     
     try {
-        // STEP 1: Fetch latest trades.json from GitHub to avoid overwriting
         updateSaveStatus('Fetching latest data from GitHub...', 'neutral');
         
         const latestResponse = await fetch(CONFIG.rawUrl + '?t=' + Date.now(), {
@@ -267,15 +272,9 @@ async function syncToGitHub(token, message) {
             latestTrades = await latestResponse.json();
         }
         
-        // STEP 2: Merge local trades into latest array
-        // Strategy: Add any local trades that don't exist in latest by ID
         const latestIds = new Set(latestTrades.map(t => t.id));
-        const newLocalTrades = trades.filter(t => !latestIds.has(t.id));
-        
-        // For trades that exist in both (edits), use local version
         const mergedTrades = [...latestTrades];
         
-        // Update existing trades with local edits
         trades.forEach(localTrade => {
             const existingIndex = mergedTrades.findIndex(t => t.id === localTrade.id);
             if (existingIndex >= 0) {
@@ -285,17 +284,14 @@ async function syncToGitHub(token, message) {
             }
         });
         
-        // Sort by openDate descending, then by ID descending
         mergedTrades.sort((a, b) => {
             const dateCompare = new Date(b.openDate) - new Date(a.openDate);
             if (dateCompare !== 0) return dateCompare;
             return b.id.localeCompare(a.id);
         });
         
-        // Update local state to match merged
         trades = mergedTrades;
         
-        // Recalculate nextId
         if (trades.length > 0) {
             const maxId = Math.max(...trades.map(t => {
                 const num = parseInt(t.id.split('-')[1]);
@@ -304,7 +300,6 @@ async function syncToGitHub(token, message) {
             nextId = maxId + 1;
         }
         
-        // STEP 3: Get SHA for commit
         const getUrl = `https://api.github.com/repos/${CONFIG.owner}/${CONFIG.repo}/contents/${CONFIG.path}?ref=${CONFIG.branch}`;
         const getResponse = await fetch(getUrl, {
             headers: {
@@ -319,7 +314,6 @@ async function syncToGitHub(token, message) {
             sha = fileData.sha;
         }
 
-        // STEP 4: Commit merged array
         const content = btoa(unescape(encodeURIComponent(JSON.stringify(mergedTrades, null, 2))));
         const commitMessage = message || `Update trades: ${mergedTrades.length} trades, ${new Date().toISOString().slice(0,10)}`;
 
@@ -344,7 +338,7 @@ async function syncToGitHub(token, message) {
         isSyncing = false;
         
         if (putResponse.ok) {
-            renderAll(); // Refresh UI with merged data
+            renderAll();
             return true;
         } else {
             const error = await putResponse.json();
