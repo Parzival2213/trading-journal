@@ -208,11 +208,9 @@ async function deleteTrade(id) {
         return;
     }
     
-    // Remove from local array first
     trades = trades.filter(t => t.id !== id);
     renderAll();
     
-    // Auto-sync to GitHub
     updateSaveStatus('Deleting trade and syncing to GitHub...', 'neutral');
     const success = await syncToGitHub(token, `Delete trade ${id}`);
     
@@ -248,12 +246,65 @@ async function editHoldingTrade(id) {
     updateSaveStatus('Trade closed. Click "Save to GitHub" to commit.', 'neutral');
 }
 
-// ==================== GITHUB SYNC ====================
+// ==================== GITHUB SYNC (FETCH LATEST FIRST) ====================
 async function syncToGitHub(token, message) {
     if (isSyncing) return false;
     isSyncing = true;
     
     try {
+        // STEP 1: Fetch latest trades.json from GitHub to avoid overwriting
+        updateSaveStatus('Fetching latest data from GitHub...', 'neutral');
+        
+        const latestResponse = await fetch(CONFIG.rawUrl + '?t=' + Date.now(), {
+            headers: {
+                'Authorization': `token ${token}`,
+                'Accept': 'application/vnd.github.v3+json'
+            }
+        });
+        
+        let latestTrades = [];
+        if (latestResponse.ok) {
+            latestTrades = await latestResponse.json();
+        }
+        
+        // STEP 2: Merge local trades into latest array
+        // Strategy: Add any local trades that don't exist in latest by ID
+        const latestIds = new Set(latestTrades.map(t => t.id));
+        const newLocalTrades = trades.filter(t => !latestIds.has(t.id));
+        
+        // For trades that exist in both (edits), use local version
+        const mergedTrades = [...latestTrades];
+        
+        // Update existing trades with local edits
+        trades.forEach(localTrade => {
+            const existingIndex = mergedTrades.findIndex(t => t.id === localTrade.id);
+            if (existingIndex >= 0) {
+                mergedTrades[existingIndex] = localTrade;
+            } else {
+                mergedTrades.unshift(localTrade);
+            }
+        });
+        
+        // Sort by openDate descending, then by ID descending
+        mergedTrades.sort((a, b) => {
+            const dateCompare = new Date(b.openDate) - new Date(a.openDate);
+            if (dateCompare !== 0) return dateCompare;
+            return b.id.localeCompare(a.id);
+        });
+        
+        // Update local state to match merged
+        trades = mergedTrades;
+        
+        // Recalculate nextId
+        if (trades.length > 0) {
+            const maxId = Math.max(...trades.map(t => {
+                const num = parseInt(t.id.split('-')[1]);
+                return isNaN(num) ? 0 : num;
+            }));
+            nextId = maxId + 1;
+        }
+        
+        // STEP 3: Get SHA for commit
         const getUrl = `https://api.github.com/repos/${CONFIG.owner}/${CONFIG.repo}/contents/${CONFIG.path}?ref=${CONFIG.branch}`;
         const getResponse = await fetch(getUrl, {
             headers: {
@@ -268,8 +319,9 @@ async function syncToGitHub(token, message) {
             sha = fileData.sha;
         }
 
-        const content = btoa(unescape(encodeURIComponent(JSON.stringify(trades, null, 2))));
-        const commitMessage = message || `Update trades: ${trades.length} trades, ${new Date().toISOString().slice(0,10)}`;
+        // STEP 4: Commit merged array
+        const content = btoa(unescape(encodeURIComponent(JSON.stringify(mergedTrades, null, 2))));
+        const commitMessage = message || `Update trades: ${mergedTrades.length} trades, ${new Date().toISOString().slice(0,10)}`;
 
         const putUrl = `https://api.github.com/repos/${CONFIG.owner}/${CONFIG.repo}/contents/${CONFIG.path}`;
         const body = {
@@ -290,7 +342,15 @@ async function syncToGitHub(token, message) {
         });
 
         isSyncing = false;
-        return putResponse.ok;
+        
+        if (putResponse.ok) {
+            renderAll(); // Refresh UI with merged data
+            return true;
+        } else {
+            const error = await putResponse.json();
+            console.error('GitHub API error:', error);
+            return false;
+        }
 
     } catch (err) {
         console.error('Sync error:', err);
