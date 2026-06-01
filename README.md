@@ -22,4 +22,5 @@ checklist:
 NOTE: Check for how many clear setups, on average can happen in a week.
 Do the above by backtesting on a weekly basis. 
 
-make sure to markout OTE befor looking for liquididty sweepas and see how often does it react to OTE or liquidity sweeps.
+forget about OTE, follow the rules of the liquidity sweep + iFVG + break of trendline liquidity: target swing lows/highs. 
+this is considered to follow simplicity, repeatability and and eliminating confusion. if it reacts at OTE minus sweeping any significant liquidity, its a gone trade - no emotions !
