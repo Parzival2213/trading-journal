@@ -1,1 +1,25 @@
-[]
+[
+    {
+    "id": "20260601-001",
+    "status": "Closed",
+    "openDate": "2026-06-01",
+    "openTime": "17:00",
+    "closeDate": "2026-06-01",
+    "closeTime": "17:06",
+    "instrument": "V25",
+    "direction": "Long",
+    "entry": 2900,
+    "stop": 2895,
+    "target": 2920,
+    "exit": 2920,
+    "riskPercent": 5,
+    "setup": "Liquidity Sweep",
+    "grade": "C",
+    "mentalState": 2,
+    "screenshot": "",
+    "notes": "nice!",
+    "rMultiple": 4,
+    "outcome": "Win",
+    "daysHeld": 1
+  }
+]
